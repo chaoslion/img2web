@@ -15,11 +15,12 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 def watermark(image, opacity):
     scale = 0.1
     color = (255, 255, 255)
-    fontfile = "/usr/share/fonts/truetype/ubuntu-font-family/UbuntuMono-R.ttf"
+    fontfile = "UbuntuMono-R.ttf"
     text = "alxjay"
 
     width, height = image.size
 
+    # skip small images
     if width < 100 or height < 100:
         return image
 
@@ -39,7 +40,6 @@ def watermark(image, opacity):
     wm_width, wm_height = textdraw.textsize(text, font=font)
     # textsize does not give correct height for ttf
     offset = font.getoffset(text)
-
     wm_width += offset[0]
     wm_height += offset[1]
 
@@ -52,6 +52,7 @@ def watermark(image, opacity):
     maxx = (int)(width*2/wm_width)
     maxy = (int)(height*2/wm_height)
 
+    # render font in a checkered layout
     for y in range(maxy):
         y_odd = y % 2 == 0
         for x in range(maxx):
@@ -68,8 +69,7 @@ def watermark(image, opacity):
     # rotate
     textlayer = textlayer.rotate(45, Image.BICUBIC)
 
-    # crop to original size
-    # crop from center
+    # crop to original size, from center    
     # import pdb; pdb.set_trace()
     cropx = textlayer.size[0] / 2 - width / 2
     cropy = textlayer.size[1] / 2 - height / 2
@@ -84,16 +84,25 @@ def watermark(image, opacity):
         alpha = ImageEnhance.Brightness(alpha).enhance(opacity)
         textlayer.putalpha(alpha)
 
+    # overlay onto original image
     return Image.composite(textlayer, image, textlayer)
 
 
 
-
+def process_image(oldpath, newpath, width, height, alpha):
+    im = Image.open(oldpath)
+    # apply watermark
+    wm = watermark(im, alpha)
+    # scale image
+    wm.thumbnail([width, height])
+    # save image    
+    wm.save(newpath)
 
 def run():
     parser = argparse.ArgumentParser(
         description="Watermark Creator"
     )
+    
 
     parser.add_argument("-a", "--alpha", type=float, dest="alpha", default=0.1)
     parser.add_argument("-sx", "--width", type=int, dest="width", default=1024)
@@ -109,13 +118,14 @@ def run():
         if not (fext.lower() == ".png" or fext.lower() == ".jpg"):
             print "invalid image"
             return
-
-        im = Image.open(cfg.path)
-        wm = watermark(im, cfg.alpha)
-        wm.thumbnail([cfg.width, cfg.height])
-
-        webimg = "{}_web{}".format(fname, fext)
-        wm.save(webimg)
+        
+        process_image(
+                cfg.path, 
+                "{}_web{}".format(fname, fext),                
+                cfg.width, 
+                cfg.height, 
+                cfg.alpha
+            )       
 
     elif os.path.isdir(cfg.path):
 
@@ -133,57 +143,16 @@ def run():
             if fname.lower().endswith("_web"):
                 continue
 
-            # new filename: eg foo.png > foo_web.png
-            new_image = "{}_web{}".format(fname.lower(), fext.lower())
+            process_image(
+                os.path.join(cfg.path, folder_item),
+                os.path.join(cfg.path, "{}_web{}".format(fname, fext)),
+                cfg.width, 
+                cfg.height, 
+                cfg.alpha
+            )
 
-            # open image to get size
-            im = Image.open(os.path.join(cfg.path, folder_item))
-            wm = watermark(im, cfg.alpha)
-            wm.thumbnail([cfg.width, cfg.height])
-
-            webimg = os.path.join(cfg.path, "{}_web{}".format(fname, fext))
-            wm.save(webimg)
     else:
-        print "unknown path"
-
-
-    ###################
-
-            # # create watermarked version, copy
-            # subprocess.call([
-            #     "composite",
-            #     "-watermark",
-            #     "30%",
-            #     "-gravity",
-            #     "SouthEast",
-            #     "watermark.png",
-            #     # old file
-            #     os.path.join(blog_item, blog_content),
-            #     # new file
-            #     os.path.join(
-            #         blog_item,
-            #         new_image
-            #     )
-            # ])
-
-            # # remove tags from watermarked image
-            # subprocess.call([
-            #     "exiftool",
-            #     "-overwrite_original",
-            #     "-all=",
-            #     os.path.join(blog_item, new_image)
-            # ])
-
-            # # move original to rawimg folder
-            # shutil.move(
-            #     os.path.join(blog_item, blog_content),
-            #     os.path.join(raw_img_folder, blog_content)
-            # )
-            # print "done: {}".format(fname)
-
-
-
-
+        print "invalid path argument"
 
 if __name__ == "__main__":
     run()
