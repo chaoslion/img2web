@@ -8,21 +8,62 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
 
 """
+does not work w/ python 3, since PIL has some bugs...
+"""
+
+"""
 * Returns an image with reduced opacity. Taken from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/362879
+* edited by chslion
 * returns watermarked img file
 * it contains no exif data
 """
 def watermark(image, opacity):
-    scale = 0.1
-    color = (255, 255, 255)
+    scale = 0.1    
     fontfile = "UbuntuMono-R.ttf"
-    text = "alxjay"
+    text = "alexander.jaehnel.info"
 
     width, height = image.size
 
     # skip small images
     if width < 100 or height < 100:
         return image
+
+
+
+    # ===calc histogram of original
+    # to black/white
+    img_bw = image.convert("L")
+    hist = img_bw.histogram()
+    dark_portion = hist[:85]
+    mid_portion = hist[85:170]
+    light_portion = hist[170:]
+        
+    cnt_dark = 0
+    cnt_mid = 0
+    cnt_light = 0
+    for pi in dark_portion:
+        cnt_dark += pi
+    for pi in mid_portion:
+        cnt_mid += pi
+    for pi in light_portion:
+        cnt_light += pi
+
+    if cnt_dark > cnt_light and cnt_dark > cnt_mid:
+        color = (255, 255, 255)
+        opacity /= 2
+        print("image seems dark, lowering opacity")        
+    elif cnt_light > cnt_dark and cnt_light > cnt_mid:
+        color = (0, 0, 0)
+        opacity *= 2
+        print("image seems light, increasing opacity")        
+    else:        
+        color = (128, 128, 128)
+        print("using default opacity")        
+
+    if opacity > 1.0:
+        opacity = 1.0
+    elif opacity < 0.0:
+        opacity = 0.0  
 
     font_size = int(scale*height)
     font = ImageFont.truetype(fontfile, font_size)
@@ -73,7 +114,7 @@ def watermark(image, opacity):
     # import pdb; pdb.set_trace()
     cropx = textlayer.size[0] / 2 - width / 2
     cropy = textlayer.size[1] / 2 - height / 2
-    textlayer = textlayer.crop([cropx, cropy, cropx + width, cropy + height])
+    textlayer = textlayer.crop([cropx, cropy, cropx + width, cropy + height])     
 
     if opacity > 0.0 and opacity < 1.0:
         if textlayer.mode != 'RGBA':
@@ -84,12 +125,14 @@ def watermark(image, opacity):
         alpha = ImageEnhance.Brightness(alpha).enhance(opacity)
         textlayer.putalpha(alpha)
 
-    # overlay onto original image
+    # overlay onto original image    
     return Image.composite(textlayer, image, textlayer)
 
 
 
 def process_image(oldpath, newpath, width, height, alpha):
+    print("processing: {}".format(oldpath))
+
     im = Image.open(oldpath)
     # apply watermark
     wm = watermark(im, alpha)
@@ -110,13 +153,13 @@ def run():
     parser.add_argument("path", type=str)
     cfg = parser.parse_args()
 
-    print "hello"
+    print("hello")
 
     if os.path.isfile(cfg.path):
         fname, fext = os.path.splitext(cfg.path)
 
         if not (fext.lower() == ".png" or fext.lower() == ".jpg"):
-            print "invalid image"
+            print("invalid image")
             return
         
         process_image(
@@ -152,7 +195,7 @@ def run():
             )
 
     else:
-        print "invalid path argument"
+        print("invalid path argument")
 
 if __name__ == "__main__":
     run()
