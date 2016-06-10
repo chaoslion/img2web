@@ -7,8 +7,14 @@ import subprocess
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
 
+def sum_array(data):
+    s = 0
+    for x in data:
+        s += x
+    return s
+
 """
-does not work w/ python 3, since PIL has some bugs...
+does currently not work w/ python 3
 """
 
 """
@@ -29,41 +35,56 @@ def watermark(image, opacity):
         return image
 
 
-
     # ===calc histogram of original
     # to black/white
     img_bw = image.convert("L")
     hist = img_bw.histogram()
-    dark_portion = hist[:85]
-    mid_portion = hist[85:170]
-    light_portion = hist[170:]
-        
-    cnt_dark = 0
-    cnt_mid = 0
-    cnt_light = 0
-    for pi in dark_portion:
-        cnt_dark += pi
-    for pi in mid_portion:
-        cnt_mid += pi
-    for pi in light_portion:
-        cnt_light += pi
 
-    if cnt_dark > cnt_light and cnt_dark > cnt_mid:
+    # determine text color
+    black = hist[0:128]
+    white = hist[128:256]
+
+    sblack = sum_array(black)
+    swhite = sum_array(white)
+
+    if sblack > swhite:
         color = (255, 255, 255)
-        opacity /= 2
-        print("image seems dark, lowering opacity")        
-    elif cnt_light > cnt_dark and cnt_light > cnt_mid:
-        color = (0, 0, 0)
-        opacity *= 2
-        print("image seems light, increasing opacity")        
-    else:        
-        color = (128, 128, 128)
-        print("using default opacity")        
+
+        maxblack = hist[0:64]
+        minblack = hist[64:128]        
+
+        sblack_min = sum_array(minblack)
+        sblack_max = sum_array(maxblack)
+
+        if sblack_max > sblack_min:        
+            opacity /= 2
+            print("image seems very dark, using white text with: {} opacity".format(opacity))
+        else:
+            print("image seems dark, using white text with: {} opacity".format(opacity))
+
+    elif sblack < swhite:
+        color = (0, 0, 0)    
+
+        minwhite = hist[128:192]
+        maxwhite = hist[192:256]
+
+        swhite_min = sum_array(minwhite)
+        swhite_max = sum_array(maxwhite)
+
+        if swhite_max > swhite_min:        
+            opacity /= 2
+            print("image seems very light, using dark text with: {} opacity".format(opacity))
+        else:
+            print("image seems light, using dark text with: {} opacity".format(opacity))
+    else:
+        color = (128, 128, 128)        
+        
+        print("image is equally dark/light, using gray text")
 
     if opacity > 1.0:
         opacity = 1.0
     elif opacity < 0.0:
-        opacity = 0.0  
+        opacity = 0.0 
 
     font_size = int(scale*height)
     font = ImageFont.truetype(fontfile, font_size)
@@ -114,7 +135,7 @@ def watermark(image, opacity):
     # import pdb; pdb.set_trace()
     cropx = textlayer.size[0] / 2 - width / 2
     cropy = textlayer.size[1] / 2 - height / 2
-    textlayer = textlayer.crop([cropx, cropy, cropx + width, cropy + height])     
+    textlayer = textlayer.crop([cropx, cropy, cropx + width, cropy + height])      
 
     if opacity > 0.0 and opacity < 1.0:
         if textlayer.mode != 'RGBA':
@@ -183,7 +204,7 @@ def run():
                 continue
 
             # skip processed images
-            if fname.lower().endswith("_web"):
+            if fname.lower().endswith("_web"):                
                 continue
 
             process_image(
