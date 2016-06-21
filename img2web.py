@@ -14,7 +14,7 @@ def sum_array(data):
     return s
 
 """
-does currently not work w/ python 3
+does not work w/ python 3, since PIL has some bugs...
 """
 
 """
@@ -24,7 +24,7 @@ does currently not work w/ python 3
 * it contains no exif data
 """
 def watermark(image, opacity):
-    scale = 0.1    
+    scale = 0.1
     fontfile = "UbuntuMono-R.ttf"
     text = "alexander.jaehnel.info"
 
@@ -51,19 +51,19 @@ def watermark(image, opacity):
         color = (255, 255, 255)
 
         maxblack = hist[0:64]
-        minblack = hist[64:128]        
+        minblack = hist[64:128]
 
         sblack_min = sum_array(minblack)
         sblack_max = sum_array(maxblack)
 
-        if sblack_max > sblack_min:        
+        if sblack_max > sblack_min:
             opacity /= 2
             print("image seems very dark, using white text with: {} opacity".format(opacity))
         else:
             print("image seems dark, using white text with: {} opacity".format(opacity))
 
     elif sblack < swhite:
-        color = (0, 0, 0)    
+        color = (0, 0, 0)
 
         minwhite = hist[128:192]
         maxwhite = hist[192:256]
@@ -71,20 +71,20 @@ def watermark(image, opacity):
         swhite_min = sum_array(minwhite)
         swhite_max = sum_array(maxwhite)
 
-        if swhite_max > swhite_min:        
+        if swhite_max > swhite_min:
             opacity /= 2
             print("image seems very light, using dark text with: {} opacity".format(opacity))
         else:
             print("image seems light, using dark text with: {} opacity".format(opacity))
     else:
-        color = (128, 128, 128)        
-        
+        color = (128, 128, 128)
+
         print("image is equally dark/light, using gray text")
 
     if opacity > 1.0:
         opacity = 1.0
     elif opacity < 0.0:
-        opacity = 0.0 
+        opacity = 0.0
 
     font_size = int(scale*height)
     font = ImageFont.truetype(fontfile, font_size)
@@ -131,11 +131,11 @@ def watermark(image, opacity):
     # rotate
     textlayer = textlayer.rotate(45, Image.BICUBIC)
 
-    # crop to original size, from center    
+    # crop to original size, from center
     # import pdb; pdb.set_trace()
     cropx = textlayer.size[0] / 2 - width / 2
     cropy = textlayer.size[1] / 2 - height / 2
-    textlayer = textlayer.crop([cropx, cropy, cropx + width, cropy + height])      
+    textlayer = textlayer.crop([cropx, cropy, cropx + width, cropy + height])
 
     if opacity > 0.0 and opacity < 1.0:
         if textlayer.mode != 'RGBA':
@@ -146,27 +146,31 @@ def watermark(image, opacity):
         alpha = ImageEnhance.Brightness(alpha).enhance(opacity)
         textlayer.putalpha(alpha)
 
-    # overlay onto original image    
+    # overlay onto original image
     return Image.composite(textlayer, image, textlayer)
 
 
 
-def process_image(oldpath, newpath, width, height, alpha):
+def process_image(fext, oldpath, newpath, width, height, alpha):
     print("processing: {}".format(oldpath))
 
     im = Image.open(oldpath)
     # apply watermark
     wm = watermark(im, alpha)
-    # scale image
-    wm.thumbnail([width, height])
-    # save image    
-    wm.save(newpath)
+    # scale image WIDTH to 1024, keep HEIGHT in ratio    
+    wm.thumbnail([width, im.size[1]])
+    
+    # save image
+    if fext.lower() == ".jpg":
+        wm.save(newpath, "jpeg", quality=100)
+    else:
+        wm.save(newpath)
 
 def run():
     parser = argparse.ArgumentParser(
         description="Watermark Creator"
     )
-    
+
 
     parser.add_argument("-a", "--alpha", type=float, dest="alpha", default=0.1)
     parser.add_argument("-sx", "--width", type=int, dest="width", default=1024)
@@ -182,14 +186,15 @@ def run():
         if not (fext.lower() == ".png" or fext.lower() == ".jpg"):
             print("invalid image")
             return
-        
+
         process_image(
-                cfg.path, 
-                "{}_web{}".format(fname, fext),                
-                cfg.width, 
-                cfg.height, 
+                fext,
+                cfg.path,
+                "{}_web{}".format(fname, fext),
+                cfg.width,
+                cfg.height,
                 cfg.alpha
-            )       
+            )
 
     elif os.path.isdir(cfg.path):
 
@@ -204,14 +209,15 @@ def run():
                 continue
 
             # skip processed images
-            if fname.lower().endswith("_web"):                
+            if fname.lower().endswith("_web"):
                 continue
 
             process_image(
+                fext,
                 os.path.join(cfg.path, folder_item),
                 os.path.join(cfg.path, "{}_web{}".format(fname, fext)),
-                cfg.width, 
-                cfg.height, 
+                cfg.width,
+                cfg.height,
                 cfg.alpha
             )
 
