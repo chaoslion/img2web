@@ -72,7 +72,7 @@ def watermark(image, opacity):
         swhite_max = sum_array(maxwhite)
 
         if swhite_max > swhite_min:
-            opacity /= 2
+            opacity *= 2
             print("image seems very light, using dark text with: {} opacity".format(opacity))
         else:
             print("image seems light, using dark text with: {} opacity".format(opacity))
@@ -192,35 +192,38 @@ def run():
         description="Watermark Creator"
     )
 
-    parser.add_argument("-a", "--alpha", type=float, dest="alpha", default=0.1)
+    parser.add_argument("-o", "--opacity", type=float, dest="opacity", default=0.1)
     parser.add_argument("-w", "--width", type=int, dest="width", default=1024)    
-    parser.add_argument("path", type=str)
+    parser.add_argument("-r", "--res", type=str, dest="res_path", default="res")
+    # parser.add_argument("path", type=str)
     parser.add_argument("target_path", type=str)
     cfg = parser.parse_args()
 
-    print("img2web 0.9")
+    print("img2web 1.0")
+	
+    res_path = os.path.join(cfg.target_path, cfg.res_path)
 
-    if os.path.isfile(cfg.path):
+    if os.path.isfile(res_path):
 
         process_image(                
-                cfg.path,
+                res_path,
                 cfg.target_path,                
                 cfg.width,                
-                cfg.alpha                
+                cfg.opacity                
             )
 
-    elif os.path.isdir(cfg.path):
+    elif os.path.isdir(res_path):
 
-        for folder_item in os.listdir(cfg.path):
+        for folder_item in os.listdir(res_path):
 
             if os.path.isdir(folder_item):
                 continue
 
             process_image(                
-                os.path.join(cfg.path, folder_item),
+                os.path.join(res_path, folder_item),
                 cfg.target_path,
                 cfg.width,
-                cfg.alpha           
+                cfg.opacity           
             )
 
     else:
