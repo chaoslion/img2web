@@ -26,7 +26,7 @@ does not work w/ python 3, since PIL has some bugs...
 def watermark(image, opacity):
     scale = 0.1
     fontfile = "UbuntuMono-R.ttf"
-    text = "alexander.jaehnel.info"
+    text = "alexander.jaehnel"
 
     width, height = image.size
 
@@ -36,7 +36,7 @@ def watermark(image, opacity):
 
 
     # ===calc histogram of original
-    # to black/white
+    # to black/white    
     img_bw = image.convert("L")
     hist = img_bw.histogram()
 
@@ -94,8 +94,9 @@ def watermark(image, opacity):
 
 
     # watermark layer takes biggest dimension
-    # so rotation fills whole image
-    textlayer = Image.new("RGBA", [width*2, height*2], (0,0,0,0))
+    # so rotation fills whole image 
+    maxdim = max(width, height)*2
+    textlayer = Image.new("RGBA", [maxdim, maxdim], (0,0,0,0))
 
     textdraw = ImageDraw.Draw(textlayer)
 
@@ -111,8 +112,8 @@ def watermark(image, opacity):
     #     image.size[1] - textsize[1] - offset[1]
     # ]
     # textdraw.text([0,0], text, font=font, fill=color)
-    maxx = (int)(width*2/wm_width)
-    maxy = (int)(height*2/wm_height)
+    maxx = (int)(maxdim/wm_width)
+    maxy = (int)(maxdim/wm_height)
 
     # render font in a checkered layout
     for y in range(maxy):
@@ -150,50 +151,62 @@ def watermark(image, opacity):
     return Image.composite(textlayer, image, textlayer)
 
 
+# process_image("/hom/lion/foo.png", "..")
+def process_image(path, target_path, width, alpha):
+    fname = os.path.basename(path)
+    fname, fext = os.path.splitext(fname)
 
-def process_image(fext, oldpath, newpath, width, height, alpha):
-    print("processing: {}".format(oldpath))
+    # convert uppercase extension
+    fext = fext.lower()
 
-    im = Image.open(oldpath)
-    # apply watermark
-    wm = watermark(im, alpha)
-    # scale image WIDTH to 1024, keep HEIGHT in ratio    
-    wm.thumbnail([width, im.size[1]])
+    if not (fext == ".png" or fext == ".jpg"):        
+        print("skip invalid image: {}".format(path))
+        return
+
+    # skip processed images
+    if fname.lower().endswith("_web"):
+        print("skip processed image: {}".format(path))
+        return
     
-    # save image
-    if fext.lower() == ".jpg":
-        wm.save(newpath, "jpeg", quality=100)
+    print("processing: {}".format(path))
+    
+    target_path = os.path.join(target_path, "{}_web{}".format(fname, fext))
+
+    im = Image.open(path)
+    # apply watermark
+    wm = watermark(im, alpha)     
+
+    # do not scale up
+    if im.size[0] > width:
+        # scale down to width(eg 1024) but keep HEIGHT in ratio    
+        wm.thumbnail([width, im.size[1]])
+    
+    # save image with no ADDITIONAL compression
+    if fext == ".jpg":
+        wm.save(target_path, "jpeg", quality=100)
     else:
-        wm.save(newpath)
+        wm.save(target_path, "png")
 
 def run():
     parser = argparse.ArgumentParser(
         description="Watermark Creator"
     )
 
-
     parser.add_argument("-a", "--alpha", type=float, dest="alpha", default=0.1)
-    parser.add_argument("-sx", "--width", type=int, dest="width", default=1024)
-    parser.add_argument("-sy", "--height", type=int, dest="height", default=768)
+    parser.add_argument("-w", "--width", type=int, dest="width", default=1024)    
     parser.add_argument("path", type=str)
+    parser.add_argument("target_path", type=str)
     cfg = parser.parse_args()
 
-    print("hello")
+    print("img2web 0.9")
 
     if os.path.isfile(cfg.path):
-        fname, fext = os.path.splitext(cfg.path)
 
-        if not (fext.lower() == ".png" or fext.lower() == ".jpg"):
-            print("invalid image")
-            return
-
-        process_image(
-                fext,
+        process_image(                
                 cfg.path,
-                "{}_web{}".format(fname, fext),
-                cfg.width,
-                cfg.height,
-                cfg.alpha
+                cfg.target_path,                
+                cfg.width,                
+                cfg.alpha                
             )
 
     elif os.path.isdir(cfg.path):
@@ -203,26 +216,15 @@ def run():
             if os.path.isdir(folder_item):
                 continue
 
-            fname, fext = os.path.splitext(folder_item)
-
-            if not (fext.lower() == ".png" or fext.lower() == ".jpg"):
-                continue
-
-            # skip processed images
-            if fname.lower().endswith("_web"):
-                continue
-
-            process_image(
-                fext,
+            process_image(                
                 os.path.join(cfg.path, folder_item),
-                os.path.join(cfg.path, "{}_web{}".format(fname, fext)),
+                cfg.target_path,
                 cfg.width,
-                cfg.height,
-                cfg.alpha
+                cfg.alpha           
             )
 
     else:
-        print("invalid path argument")
+        print("invalid path, file or directory expected")
 
 if __name__ == "__main__":
     run()
