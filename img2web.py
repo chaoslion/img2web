@@ -26,14 +26,9 @@ does not work w/ python 3, since PIL has some bugs...
 def watermark(image, opacity):
     scale = 0.1
     fontfile = "UbuntuMono-R.ttf"
-    text = "alexander.jaehnel"
+    text = "alexanderjaehnel.de"
 
     width, height = image.size
-
-    # skip small images
-    if width < 100 or height < 100:
-        return image
-
 
     # ===calc histogram of original
     # to black/white    
@@ -46,6 +41,7 @@ def watermark(image, opacity):
 
     sblack = sum_array(black)
     swhite = sum_array(white)
+    
 
     if sblack > swhite:
         color = (255, 255, 255)
@@ -168,13 +164,16 @@ def process_image(path, target_path, width, alpha):
         print("skip processed image: {}".format(path))
         return
     
-    print("processing: {}".format(path))
-    
     target_path = os.path.join(target_path, "{}_web{}".format(fname, fext))
 
     im = Image.open(path)
-    # apply watermark
-    wm = watermark(im, alpha)     
+
+    if im.size[0] < 100 or im.size[1] < 100:
+        print("skip small image: {}".format(path))
+    else:
+        print("processing: {}".format(path))
+        # apply watermark
+        wm = watermark(im, alpha)     
 
     # do not scale up
     if im.size[0] > width:
