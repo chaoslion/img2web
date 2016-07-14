@@ -53,7 +53,7 @@ def watermark(image, opacity):
         sblack_max = sum_array(maxblack)
 
         if sblack_max > sblack_min:
-            opacity /= 2
+            # opacity /= 2
             print("image seems very dark, using white text with: {} opacity".format(opacity))
         else:
             print("image seems dark, using white text with: {} opacity".format(opacity))
@@ -68,7 +68,7 @@ def watermark(image, opacity):
         swhite_max = sum_array(maxwhite)
 
         if swhite_max > swhite_min:
-            opacity *= 2
+            # opacity *= 2
             print("image seems very light, using dark text with: {} opacity".format(opacity))
         else:
             print("image seems light, using dark text with: {} opacity".format(opacity))
@@ -160,11 +160,12 @@ def process_image(path, target_path, width, alpha):
         return
 
     # skip processed images
-    if fname.lower().endswith("_web"):
-        print("skip processed image: {}".format(path))
-        return
+    # if fname.lower().endswith("_web"):
+    #     print("skip processed image: {}".format(path))
+    #     return
     
-    target_path = os.path.join(target_path, "{}_web{}".format(fname, fext))
+    # target_path = os.path.join(target_path, "{}_web{}".format(fname, fext))
+    target_path = os.path.join(target_path, "{}{}".format(fname, fext))
 
     im = Image.open(path)
 
@@ -178,6 +179,7 @@ def process_image(path, target_path, width, alpha):
     # do not scale up
     if im.size[0] > width:
         # scale down to width(eg 1024) but keep HEIGHT in ratio    
+	print("scaling down")
         wm.thumbnail([width, im.size[1]])
     
     # save image with no ADDITIONAL compression
@@ -192,7 +194,7 @@ def run():
     )
 
     parser.add_argument("-o", "--opacity", type=float, dest="opacity", default=0.1)
-    parser.add_argument("-w", "--width", type=int, dest="width", default=1024)    
+    parser.add_argument("-w", "--width", type=int, dest="width", default=2048)    
     parser.add_argument("-r", "--res", type=str, dest="res_path", default="res")
     # parser.add_argument("path", type=str)
     parser.add_argument("target_path", type=str)
