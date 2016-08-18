@@ -171,6 +171,7 @@ def process_image(path, target_path, width, alpha):
 
     if im.size[0] < 100 or im.size[1] < 100:
         print("skip small image: {}".format(path))
+        return
     else:
         print("processing: {}".format(path))
         # apply watermark
