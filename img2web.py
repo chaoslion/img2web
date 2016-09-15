@@ -83,21 +83,23 @@ def watermark(image, opacity):
     elif opacity < 0.0:
         opacity = 0.0
 
-    font_size = int(scale*height)
-    font = ImageFont.truetype(os.path.join(sys.path[0], fontfile), font_size)
 
     if image.mode != "RGBA":
         image = image.convert("RGBA")
 
-
     # watermark layer takes 2x dimension
     # so rotation fills whole image
-    tl_width = width * 2
-    tl_height = height * 2
-    textlayer = Image.new("RGBA", [tl_width, tl_height], (0,0,0,0))
+    maxdim = max(width, height)
 
+    font_size = int(scale*height)
+    font = ImageFont.truetype(os.path.join(sys.path[0], fontfile), font_size)
+
+    tl_width = 2 * maxdim # width * 2
+    tl_height = 2 * maxdim # height * 2
+    textlayer = Image.new("RGBA", [tl_width, tl_height], (0,0,0,0))
     textdraw = ImageDraw.Draw(textlayer)
     wm_width, wm_height = textdraw.textsize(text, font=font)
+
     # textsize does not give correct height for ttf
     offset = font.getoffset(text)
     wm_width += offset[0]
@@ -111,21 +113,6 @@ def watermark(image, opacity):
             if check:
                 textdraw.text([x, y], text, font=font, fill=color)
             check = not check
-
-
-    # render font in a checkered layout
-    #for y in range(maxy):
-    #    y_odd = y % 2 == 0
-    #    for x in range(maxx):
-    #        # x is odd?
-    #        x_odd = x % 2 == 0
-#
-   #         check = x_odd
-   #         if not y_odd:
-   #             check = not check
-#
-   #         if check:
-   #             textdraw.text([x*wm_width, y*wm_height], text, font=font, fill=color)
 
     if opacity > 0.0 and opacity < 1.0:
         if textlayer.mode != 'RGBA':
@@ -141,6 +128,7 @@ def watermark(image, opacity):
     cropx = textlayer.size[0] / 2 - width / 2
     cropy = textlayer.size[1] / 2 - height / 2
     textlayer = textlayer.crop([cropx, cropy, cropx + width, cropy + height])
+
     # merge with original image
     return Image.composite(textlayer, image, textlayer)
 
@@ -154,7 +142,7 @@ def process_image(path, target_path, width, alpha, force):
     fext = fext.lower()
 
     if not (fext == ".png" or fext == ".jpg"):
-        print("skip invalid image: {}".format(path))
+        print("\033[91mskip invalid image: {}\033[0m".format(path))
         return
 
     # skip processed images
@@ -168,19 +156,21 @@ def process_image(path, target_path, width, alpha, force):
     im = Image.open(path)
 
     if im.size[0] < 100 or im.size[1] < 100:
-        print("skip small image: {}".format(path))
+        print("\033[91mskip small image: {}\033[0m".format(path))
         return
 
     print("processing: {}".format(path))
     # apply watermark
     # wm = watermark(im, alpha)
 
-    # do not scale up
+    # doa not scale up
     # only scale jpg files?
     if force or (im.size[0] > width and fext == ".jpg"):
         # scale down to width(eg 1024) but keep HEIGHT in ratio
 	print("scaling down")
         im.thumbnail([width, im.size[1]])
+    else:
+        print("\033[93mnot scaling down}033[0m")
 
     # apply watermark
     wm = watermark(im, alpha)
@@ -197,7 +187,7 @@ def run():
     )
 
     parser.add_argument("-o", "--opacity", type=float, dest="opacity", default=0.1)
-    parser.add_argument("-w", "--width", type=int, dest="width", default=768)
+    parser.add_argument("-w", "--width", type=int, dest="width", default=1024)
     parser.add_argument("-r", "--res", type=str, dest="res_path", default="res")
     parser.add_argument("-f", "--force", type=bool, dest="force", default=False)
     # parser.add_argument("path", type=str)
