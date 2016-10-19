@@ -133,7 +133,6 @@ def watermark(image, opacity):
     return Image.composite(textlayer, image, textlayer)
 
 
-# process_image("/hom/lion/foo.png", "..")
 def process_image(path, target_path, width, alpha, force):
     fname = os.path.basename(path)
     fname, fext = os.path.splitext(fname)
@@ -150,8 +149,8 @@ def process_image(path, target_path, width, alpha, force):
     #     print("skip processed image: {}".format(path))
     #     return
 
-    # target_path = os.path.join(target_path, "{}_web{}".format(fname, fext))
-    target_path = os.path.join(target_path, "{}{}".format(fname, fext))
+    # store with lowercase filename!
+    target_path = os.path.join(target_path, "{}{}".format(fname.lower(), fext))
 
     im = Image.open(path)
 
@@ -170,7 +169,7 @@ def process_image(path, target_path, width, alpha, force):
 	print("scaling down")
         im.thumbnail([width, im.size[1]])
     else:
-        print("\033[93mnot scaling down}033[0m")
+        print("\033[93mnot scaling down\033[0m")
 
     # apply watermark
     wm = watermark(im, alpha)
@@ -197,6 +196,7 @@ def run():
     print("img2web 1.0")
 
     res_path = os.path.join(cfg.target_path, cfg.res_path)
+    print(res_path)
 
     if os.path.isfile(res_path):
 
