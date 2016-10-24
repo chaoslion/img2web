@@ -155,24 +155,26 @@ def process_image(path, target_path, width, alpha, force):
     im = Image.open(path)
 
     if im.size[0] < 100 or im.size[1] < 100:
+        # do not create watermark for small images...
         print("\033[91mskip small image: {}\033[0m".format(path))
-        return
-
-    print("processing: {}".format(path))
-    # apply watermark
-    # wm = watermark(im, alpha)
-
-    # doa not scale up
-    # only scale jpg files?
-    if force or (im.size[0] > width and fext == ".jpg"):
-        # scale down to width(eg 1024) but keep HEIGHT in ratio
-	print("scaling down")
-        im.thumbnail([width, im.size[1]])
+        wm = im.copy()
     else:
-        print("\033[93mnot scaling down\033[0m")
 
-    # apply watermark
-    wm = watermark(im, alpha)
+        print("processing: {}".format(path))
+        # apply watermark
+        # wm = watermark(im, alpha)
+
+        # doa not scale up
+        # only scale jpg files?
+        if force or (im.size[0] > width and fext == ".jpg"):
+            # scale down to width(eg 1024) but keep HEIGHT in ratio
+            print("scaling down")
+            im.thumbnail([width, im.size[1]])
+        else:
+            print("\033[93mnot scaling down\033[0m")
+
+        # apply watermark
+        wm = watermark(im, alpha)
 
     # save image with no ADDITIONAL compression
     if fext == ".jpg":
