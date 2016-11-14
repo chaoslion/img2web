@@ -132,8 +132,9 @@ def watermark(image, opacity):
     # merge with original image
     return Image.composite(textlayer, image, textlayer)
 
-
 def process_image(path, target_path, width, alpha, force):
+    THUMB_SIZE = (640, 480)
+
     fname = os.path.basename(path)
     fname, fext = os.path.splitext(fname)
 
@@ -150,7 +151,8 @@ def process_image(path, target_path, width, alpha, force):
     #     return
 
     # store with lowercase filename!
-    target_path = os.path.join(target_path, "{}{}".format(fname.lower(), fext))
+    thumb_path = "{}/thumb/{}{}".format(target_path, fname.lower(), fext)
+    target_path = "{}/{}{}".format(target_path, fname.lower(), fext)
 
     im = Image.open(path)
 
@@ -176,6 +178,11 @@ def process_image(path, target_path, width, alpha, force):
         # apply watermark
         wm = watermark(im, alpha)
 
+    # create thumb
+    thumb = wm.copy()
+    thumb.thumbnail(THUMB_SIZE)
+    thumb.save(thumb_path)
+     
     # save image with no ADDITIONAL compression
     if fext == ".jpg":
         wm.save(target_path, "jpeg", quality=100)
@@ -186,12 +193,12 @@ def run():
     parser = argparse.ArgumentParser(
         description="Watermark Creator"
     )
-
+    
     parser.add_argument("-o", "--opacity", type=float, dest="opacity", default=0.1)
     parser.add_argument("-w", "--width", type=int, dest="width", default=1024)
     parser.add_argument("-r", "--res", type=str, dest="res_path", default="res")
     parser.add_argument("-f", "--force", type=bool, dest="force", default=False)
-    # parser.add_argument("path", type=str)
+    # parser.add_argument("-t", "--thumb", type=str)
     parser.add_argument("target_path", type=str)
     cfg = parser.parse_args()
 
