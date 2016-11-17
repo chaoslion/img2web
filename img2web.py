@@ -25,8 +25,10 @@ does not work w/ python 3, since PIL has some bugs...
 * it contains no exif data
 """
 def watermark(image, opacity):
+    mypath = os.path.dirname(os.path.abspath(__file__))
+
     scale = 0.1
-    fontfile = "UbuntuMono-R.ttf"
+    fontfile = os.path.join(mypath, "UbuntuMono-R.ttf")
     text = "alexanderjaehnel.de"
 
     width, height = image.size
@@ -154,6 +156,13 @@ def process_image(path, target_path, width, alpha, force):
     thumb_path = "{}/thumb/{}{}".format(target_path, fname.lower(), fext)
     target_path = "{}/{}{}".format(target_path, fname.lower(), fext)
 
+    # clear originals, they might not exist
+    try:
+        os.remove(thumb_path)
+        os.remove(target_path)
+    except OSError:
+        pass
+
     im = Image.open(path)
 
     if im.size[0] < 100 or im.size[1] < 100:
@@ -180,7 +189,7 @@ def process_image(path, target_path, width, alpha, force):
 
     # create thumb
     thumb = wm.copy()
-    thumb.thumbnail(THUMB_SIZE)
+    thumb.thumbnail(THUMB_SIZE, Image.LANCZOS)
     thumb.save(thumb_path)
      
     # save image with no ADDITIONAL compression
@@ -189,15 +198,24 @@ def process_image(path, target_path, width, alpha, force):
     else:
         wm.save(target_path, "png")
 
+def dftOptions():
+    return dict(
+        opacity=0.1,
+        width=1024,
+        force=False
+    )
+
 def run():
     parser = argparse.ArgumentParser(
         description="Watermark Creator"
     )
+
+    opt = dftOptions()
     
-    parser.add_argument("-o", "--opacity", type=float, dest="opacity", default=0.1)
-    parser.add_argument("-w", "--width", type=int, dest="width", default=1024)
+    parser.add_argument("-o", "--opacity", type=float, dest="opacity", default=opt["opacity"])
+    parser.add_argument("-w", "--width", type=int, dest="width", default=opt["width"])
     parser.add_argument("-r", "--res", type=str, dest="res_path", default="res")
-    parser.add_argument("-f", "--force", type=bool, dest="force", default=False)
+    parser.add_argument("-f", "--force", type=bool, dest="force", default=opt["force"])
     # parser.add_argument("-t", "--thumb", type=str)
     parser.add_argument("target_path", type=str)
     cfg = parser.parse_args()
@@ -219,10 +237,17 @@ def run():
 
     elif os.path.isdir(res_path):
 
+        # clear folders /. and /thumb
+        for folder in [".", "thumb"]:
+            images = [f for f in os.listdir(os.path.join(cfg.target_path, folder)) if f.endswith(".jpg") or f.endswith(".png")]
+            for img in images:
+                os.remove(os.path.join(cfg.target_path, folder, img))
+
         for folder_item in os.listdir(res_path):
 
             if os.path.isdir(folder_item):
                 continue
+
 
             process_image(
                 os.path.join(res_path, folder_item),
@@ -236,4 +261,5 @@ def run():
         print("invalid path, file or directory expected")
 
 if __name__ == "__main__":
+
     run()
